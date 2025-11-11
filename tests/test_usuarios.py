@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import jwt
 import pytest
 from unittest.mock import patch
 from app import app
 from tests.test_login_jwt import SECRET_KEY
+from controllers.auth_utils import key as SECRET_KEY
 
 
 @pytest.fixture
@@ -21,8 +22,6 @@ def test_cadastro_usuario_sucesso(client):
             "data_nasc": "2000-01-01"
         }
     })()
-
-
 
         response = client.post("/usuarios/cadastro", json={
             "nome": "Teste",
@@ -45,7 +44,9 @@ def test_cadastro_usuario_email_existente(client):
             "data_nasc": "2000-01-01"
         })
         assert response.status_code == 400
-        assert "E-mail já cadastrado" in response.get_data(as_text=True)
+        # Corrigido: acessar o valor do dicionário
+        assert response.get_json()["erro"] == "E-mail já cadastrado!"
+
 
 
 def test_login_usuario_sucesso(client):
@@ -66,12 +67,19 @@ def test_login_usuario_sucesso(client):
 
 # Teste de rota protegida com token JWT
 def test_rota_perfil_autenticada(client):
-    payload = {"id": "123", "exp": datetime.datetime.now() + datetime.timedelta(hours=2)}
+    # payload com datetime UTC
+    payload = {"id": "123", "exp": datetime.now(timezone.utc) + timedelta(hours=2)}
+
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/usuarios/perfil", headers=headers)
 
+    print("Status:", response.status_code)
+    print("JSON retornado:", response.get_json())
+
+    # asserts
     assert response.status_code == 200
     data = response.get_json()
-    assert "Bem-vindo" in data["mensagem"]
+    assert "mensagem" in data
+    assert data["mensagem"] == "Bem-vindo usuário 123!"

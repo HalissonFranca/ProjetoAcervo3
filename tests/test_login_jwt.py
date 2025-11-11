@@ -24,7 +24,7 @@ def test_login_usuario_mockado(client):
         verificar_senha=lambda senha: senha == "12345678"  # mock do método
     )
 
-    with patch("controllers.usuariosController.bd.buscarEmail", return_value=usuario_falso):
+    with patch("controllers.usuarios_controller.bd.buscarEmail", return_value=usuario_falso):
         response = client.post("/usuarios/login", json={
             "email": "joao@teste.com",
             "senha": "12345678"
