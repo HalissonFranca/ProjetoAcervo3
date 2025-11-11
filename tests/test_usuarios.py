@@ -1,6 +1,9 @@
+from datetime import datetime
+import jwt
 import pytest
 from unittest.mock import patch
 from app import app
+from tests.test_login_jwt import SECRET_KEY
 
 
 @pytest.fixture
@@ -9,15 +12,17 @@ def client():
 
 
 def test_cadastro_usuario_sucesso(client):
-    with patch("controllers.usuariosController.bd.cadastrarUsuario") as mock_cadastrar:
+    with patch("controllers.usuarios_controller.bd.cadastrarUsuario") as mock_cadastrar:
         mock_cadastrar.return_value = type("Usuario", (), {
-            "to_dict": lambda self=None: {
-                "id": "123",
-                "nome": "Teste",
-                "email": "teste@teste.com",
-                "data_nasc": "2000-01-01"
-            }
-        })()
+        "to_dict": lambda self: {
+            "id": "123",
+            "nome": "Teste",
+            "email": "teste@teste.com",
+            "data_nasc": "2000-01-01"
+        }
+    })()
+
+
 
         response = client.post("/usuarios/cadastro", json={
             "nome": "Teste",
@@ -32,7 +37,7 @@ def test_cadastro_usuario_sucesso(client):
 
 
 def test_cadastro_usuario_email_existente(client):
-    with patch("controllers.usuariosController.bd.cadastrarUsuario", return_value=None):
+    with patch("controllers.usuarios_controller.bd.cadastrarUsuario", return_value=None):
         response = client.post("/usuarios/cadastro", json={
             "nome": "Duplicado",
             "email": "teste@teste.com",
@@ -51,10 +56,22 @@ def test_login_usuario_sucesso(client):
         "verificar_senha": lambda self, senha: senha == "123456"
     })()
 
-    with patch("controllers.usuariosController.bd.buscarEmail", return_value=mock_usuario):
+    with patch("controllers.usuarios_controller.bd.buscarEmail", return_value=mock_usuario):
         response = client.post("/usuarios/login", json={
             "email": "teste@teste.com",
             "senha": "123456"
         })
         assert response.status_code == 200
         assert "token" in response.get_json()
+
+# Teste de rota protegida com token JWT
+def test_rota_perfil_autenticada(client):
+    payload = {"id": "123", "exp": datetime.datetime.now() + datetime.timedelta(hours=2)}
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+    headers = {"Authorization": f"Bearer {token}"}
+    response = client.get("/usuarios/perfil", headers=headers)
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "Bem-vindo" in data["mensagem"]
