@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import patch
 from app import app
+from database import bd
+
 
 
 @pytest.fixture
@@ -20,12 +22,12 @@ def test_registrar_leitura_sucesso(client):
         "comentario": "Excelente"
     })()
 
-    with patch("controllers.leituras_controller.bd.usuarios", {"123": mock_usuario}), \
-         patch("controllers.leituras_controller.bd.livros", {"456": mock_livro}), \
-         patch("controllers.leituras_controller.bd.cadastrarLeitura", return_value=mock_leitura):
+    with patch("controllers.auth_utils.bd.usuarios", {"123": mock_usuario}), \
+            patch("controllers.auth_utils.bd.livros", {"456": mock_livro}), \
+            patch("controllers.leituras_controller.bd.cadastrarLeitura", return_value=mock_leitura):
 
         response = client.post("/leituras/123/456", json={
-            "status": "Lido",
+        "status": "Lido",
             "avaliacao": 5,
             "comentario": "Excelente",
             "data_leitura": "2025-11-10"
